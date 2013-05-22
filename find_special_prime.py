@@ -5,7 +5,8 @@ import sys
 import cProfile
 import cPickle
 import sieve
-random = SecureRandom.SecureRandom()
+from random import SystemRandom
+random = SystemRandom()
 
 try:
     from gmpy2 import mpz
