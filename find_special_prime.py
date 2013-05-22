@@ -1,10 +1,11 @@
-import primes
 import SecureRandom
-import math
-import sys
-import cProfile
 import cPickle
+import cProfile
+import math
+import operator
+import primes
 import sieve
+import sys
 import time
 from random import SystemRandom
 random = SystemRandom()
@@ -18,7 +19,6 @@ except ImportError:
         has_gmpy = True
     except ImportError:
         has_gmpy = False
-
 
 def gen_special_prime(bits, certainty=128, random=random):
     # In addition to the well-known constraint that p must be congruent
@@ -68,13 +68,22 @@ def gen_special_prime(bits, certainty=128, random=random):
     p1_pass = 0
     starttime = time.time()
     lasttime = starttime
+    advantage = float(reduce(operator.mul, map(len, map(operator.itemgetter(1), sieve_residues)))) / sieve_modulus
+    candidate_probability = 1/(((math.log(2)*bits)**3)*advantage)
+
     while True:
         loops += 1
         if loops % (2**15) == 0: # output roughly once an hour
             now = time.time()
-            print >>sys.stderr, "%s loops" % loops
-            print >>sys.stderr, "%s p2_pass" % p2_pass
-            print >>sys.stderr, "%s p1_pass" % p1_pass
+            print >>sys.stderr, "%s candidates tested" % loops
+            print >>sys.stderr, "%s primes found" % p2_pass
+            print >>sys.stderr, "%s safe primes found" % p1_pass
+            # binomial expansion with 4 terms
+            prob = (loops * candidate_probability)
+            prob -= float(loops*(loops-1))/2 * candidate_probability**2
+            prob += float(loops*(loops-1)*(loops-2))/6 * candidate_probability**3
+            prob -= float(loops*(loops-1)*(loops-2)*(loops-3))/24 * candidate_probability**4
+            print >>sys.stderr, "%s expected probability of finding prime already" % prob
             print >>sys.stderr, "%s iterations per second" % (loops / (now - starttime))
             print >>sys.stderr, "%s seconds since last output" % (now - lasttime)
             print >>sys.stderr
@@ -90,12 +99,16 @@ def gen_special_prime(bits, certainty=128, random=random):
 
         p1 = p2 * 2 + 1
         p = p1 * 2 + 1
-        if primes.mr_test(p2, certainty=certainty):
-            p2_pass += 1
-            if primes.mr_test(p1, certainty=certainty):
-                p1_pass += 1
-                if primes.mr_test(p, certainty=certainty):                    
-                    break
+        # first run a few abbreviated Miller-Rabin tests to fail quickly
+        if primes.mr_test(p2, rounds=1) \
+           and primes.mr_test(p1, rounds=1) \
+           and primes.mr_test(p, rounds=1):
+            if primes.mr_test(p2, certainty=certainty):
+                p2_pass += 1
+                if primes.mr_test(p1, certainty=certainty):
+                    p1_pass += 1
+                    if primes.mr_test(p, certainty=certainty):
+                        break
     print >>sys.stderr, "Found doubly safe prime after %s iterations." % loops
     print >>sys.stderr, "We found %s primes and %s singly safe primes." % (p2_pass, p1_pass)
     return p

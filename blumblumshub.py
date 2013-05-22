@@ -180,9 +180,13 @@ class BlumBlumShubRandom(random.Random):
     
             p1 = p2 * 2 + 1
             p = p1 * 2 + 1
-            if primes.mr_test(p2, certainty=certainty)\
-                   and primes.mr_test(p1, certainty=certainty)\
-                   and primes.mr_test(p, certainty=certainty):
+            # first run a few abbreviated Miller-Rabin tests to fail quickly
+            if primes.mr_test(p2, rounds=1) \
+               and primes.mr_test(p1, rounds=1) \
+               and primes.mr_test(p, rounds=1) \
+               and primes.mr_test(p2, certainty=certainty)\
+               and primes.mr_test(p1, certainty=certainty)\
+               and primes.mr_test(p, certainty=certainty):
                 break
         return p
     

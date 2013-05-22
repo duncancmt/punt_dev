@@ -29,13 +29,14 @@ def gen_prime(bits=256, certainty=128, random=random):
         if mr_test(candidate, certainty=certainty):
             return candidate
 
-def mr_test(n, certainty=128):
+def mr_test(n, certainty=128, rounds=None):
     """
     returns True if n is possibly prime, False if n is definitely composite
     2^-certainty of numbers for which this returns True will mistakenly be composite
     certainty defaults to 128
     """
-    rounds = int(math.ceil(math.log(1 - 2**certainty - math.log(n) + (2**certainty)*math.log(n), 2)/2))
+    if rounds is None:
+        rounds = int(math.ceil(math.log(1 - 2**certainty - math.log(n) + (2**certainty)*math.log(n), 2)/2))
 
     if (not isinstance(n, (int, long))) or n < 2 or n % 2 == 0:
         return False
