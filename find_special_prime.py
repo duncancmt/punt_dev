@@ -5,6 +5,7 @@ import sys
 import cProfile
 import cPickle
 import sieve
+import time
 from random import SystemRandom
 random = SystemRandom()
 
@@ -65,12 +66,19 @@ def gen_special_prime(bits, certainty=128, random=random):
     loops = 0
     p2_pass = 0
     p1_pass = 0
+    starttime = time.time()
+    lasttime = starttime
     while True:
         loops += 1
-        if loops % 10**6 == 0:
-            print "%s loops" % loops
-            print "%s p2_pass" % p2_pass
-            print "%s p1_pass" % p1_pass
+        if loops % (2**15) == 0: # output roughly once an hour
+            now = time.time()
+            print >>sys.stderr, "%s loops" % loops
+            print >>sys.stderr, "%s p2_pass" % p2_pass
+            print >>sys.stderr, "%s p1_pass" % p1_pass
+            print >>sys.stderr, "%s iterations per second" % (loops / (now - starttime))
+            print >>sys.stderr, "%s seconds since last output" % (now - lasttime)
+            print >>sys.stderr
+            lasttime = now
             
         # choose a random p2 that has an allowed residue
         p2 = random.getrandbits(rand_bits)
@@ -88,8 +96,8 @@ def gen_special_prime(bits, certainty=128, random=random):
                 p1_pass += 1
                 if primes.mr_test(p, certainty=certainty):                    
                     break
-    print "Found doubly safe prime after %s iterations." % loops
-    print "We found %s primes and %s singly safe primes." % (p2_pass, p1_pass)
+    print >>sys.stderr, "Found doubly safe prime after %s iterations." % loops
+    print >>sys.stderr, "We found %s primes and %s singly safe primes." % (p2_pass, p1_pass)
     return p
     
 if __name__ == "__main__":
