@@ -40,7 +40,7 @@ def generate(i):
 
 def _check(i):
     """Check the naive and efficient sieves against each other for a given i'th primorial"""
-    sieve = generate_sieve(i)
+    sieve = generate(i)
     residues = list()
     for j in product(*map(operator.itemgetter(1), sieve[1])):
         residue = 0
