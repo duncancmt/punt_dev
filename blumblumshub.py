@@ -136,26 +136,27 @@ class BlumBlumShubRandom(random.Random):
         # Only numbers with particular residues can generate a doubly safe prime
         # by only generating candidates with those particular residues, we
         # dramatically reduce our search space.
-        (sieve_modulus, sieve) = sieve.generate(15) # chosen to fit in a single limb of a gmpy2 mpz
+        (sieve_modulus, sieve_residues) = sieve.generate(15) # chosen to fit in a single limb of a gmpy2 mpz
+                                                             # advantage: 0.007719110752972912
 
         if has_gmpy:
             m = mpz(sieve_modulus)
-            sieve = [ (mpz(n), map(mpz, s), mpz(e)) for (n,s,e) in sieve ]
+            sieve_residues = [ (mpz(n), map(mpz, s), mpz(e)) for (n,s,e) in sieve_residues ]
         else:
             m = sieve_modulus
 
         def choice(s):
             # random.choice is implemented wrong, so we do it ourselves
             l = int(math.ceil(math.log(len(s),2)))
-            i = len(allowed_residues)
-            while i >= len(allowed_residues):
+            i = len(s)
+            while i >= len(s):
                 i = random.getrandbits(l)
             return s[i]
             
         def choose_residue():
             residue = 0
-            for (n,s,e) in sieve:
-                retval += e*choice(s) % sieve_modulus
+            for (n,s,e) in sieve_residues:
+                residue += e*choice(s) % sieve_modulus
             return int(residue)
         
         bits -= 2 # we'll get the low two bits by left shifting and adding one, twice

@@ -1,6 +1,5 @@
 import operator
 import cPickle
-import gmpy2
 from itertools import *
 
 primes = cPickle.Unpickler(open("10000_primes.pkl")).load()
@@ -37,7 +36,7 @@ def generate(i):
     where expander is 1 mod the prime and 0 mod all the other primes
     """
     m = reduce(operator.mul, primes[:i])
-    return (m, [ (n, _allowed_residues(n), ((m*int(gmpy2.invert(m/n,n)))/n) % m) for n in primes[:i] ] )
+    return (m, [ (n, _allowed_residues(n), ((m*pow(m/n,n-2,n))/n) % m) for n in primes[:i] ] )
 
 def _check(i):
     """Check the naive and efficient sieves against each other for a given i'th primorial"""
