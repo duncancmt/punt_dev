@@ -39,6 +39,8 @@ def gen_special_prime(bits, certainty=128, random=random):
 
     def choice(s):
         # random.choice is implemented wrong, so we do it ourselves
+        if len(s) == 1:
+            return s[0]
         l = int(math.ceil(math.log(len(s),2)))
         i = len(s)
         while i >= len(s):
@@ -48,7 +50,8 @@ def gen_special_prime(bits, certainty=128, random=random):
     def choose_residue():
         residue = 0
         for (n,s,e) in sieve_residues:
-            residue += e*choice(s) % sieve_modulus
+            residue = (residue + e*choice(s)) % sieve_modulus
+        assert sieve_modulus > residue
         return int(residue)
     
     bits -= 2 # we'll get the low two bits by left shifting and adding one, twice
@@ -84,11 +87,11 @@ def gen_special_prime(bits, certainty=128, random=random):
                 p1_pass += 1
                 if primes.mr_test(p, certainty=certainty):                    
                     break
-    print "Found prime after %s iterations." % loops
+    print "Found doubly safe prime after %s iterations." % loops
     print "We found %s primes and %s singly safe primes." % (p2_pass, p1_pass)
     return p
     
 if __name__ == "__main__":
-    exec("print gen_special_prime(256, 256)")
+    exec("print gen_special_prime(8192, 256)")
     # cProfile.run("print gen_special_prime(8192, 256)")
     

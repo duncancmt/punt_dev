@@ -66,7 +66,7 @@ class BlumBlumShubRandom(random.Random):
         else:
             raise RuntimeError("Too many bits supplied. Security guarantees invalidated.")
         
-        iterations = int(math.ceil((1.0*n-self._cache_len) / self._bits_per_iteration))
+        iterations = max(int(math.ceil((1.0*n-self._cache_len) / self._bits_per_iteration)),0)
 
         mask = 2**self._bits_per_iteration - 1
         for i in xrange(iterations):
@@ -75,7 +75,7 @@ class BlumBlumShubRandom(random.Random):
             self._cache_len += self._bits_per_iteration
             self.state = pow(self.state, 2, self.modulus)
 
-        result = self._cache & (2**n - 1)
+        result = self._cache & ((1<<n) - 1)
         self._cache >>= n
         self._cache_len -= n
         return result
@@ -147,6 +147,8 @@ class BlumBlumShubRandom(random.Random):
 
         def choice(s):
             # random.choice is implemented wrong, so we do it ourselves
+            if len(s) == 1:
+                return s[0]
             l = int(math.ceil(math.log(len(s),2)))
             i = len(s)
             while i >= len(s):
@@ -156,7 +158,8 @@ class BlumBlumShubRandom(random.Random):
         def choose_residue():
             residue = 0
             for (n,s,e) in sieve_residues:
-                residue += e*choice(s) % sieve_modulus
+                residue = (residue + e*choice(s)) % sieve_modulus
+            assert sieve_modulus > residue
             return int(residue)
         
         bits -= 2 # we'll get the low two bits by left shifting and adding one, twice
