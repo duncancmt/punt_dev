@@ -5,6 +5,7 @@ import math
 from itertools import *
 
 primes = cPickle.Unpickler(open("10000_primes.pkl")).load()
+log_max_primorial = 150606
 
 def _successors(n, s):
     return [ (2*i + 1) % n for i in s ]
@@ -42,9 +43,33 @@ def generate_naive(i):
 
 class Sieve(object):
     """An efficient way of representing the allowed residues for the i'th primorial"""
-    def __init__(self, i):
-        self.modulus = m = reduce(operator.mul, primes[:i])
-        self.residues = [ (n, _allowed_residues(n), ((m*pow(m/n,n-2,n))/n) % m) for n in primes[:i] ]
+    def __init__(self, mod_bits):
+        """Argument mod_bits is the maximum length of the modulus"""
+        if mod_bits >= log_max_primorial:
+            raise ValueError("Requested modulus is too large")
+        max_index = len(primes)+1
+        min_index = 1
+        index = None
+        while max_index > min_index:
+            index = (max_index + min_index) / 2
+            m = reduce(operator.mul, primes[:index])
+            if m >> mod_bits:
+                # too big
+                max_index = index
+            elif not (m >> (mod_bits - 1)):
+                # too small
+                if index == min_index:
+                    # we do floor division for the average, so we can get stuck here
+                    break
+                min_index = index
+            else:
+                break
+
+        assert (1 << mod_bits) > m
+        assert (1 << mod_bits) < reduce(operator.mul, primes[:index+1])
+        self.index = index = int(round(index))
+        self.modulus = m
+        self.residues = [ (n, _allowed_residues(n), ((m*pow(m/n,n-2,n))/n) % m) for n in primes[:index] ]
         num_residues = reduce(operator.mul, map(len, map(operator.itemgetter(1), self.residues)))
         try:
             self.advantage = float(num_residues) / self.modulus
@@ -52,6 +77,7 @@ class Sieve(object):
             self.advantage = math.exp(math.log(num_residues) - math.log(self.modulus))
 
     def make_candidate(self, bits, random=random):
+        """Argument bits is the maximum length of the candidate generated"""
         # avoid doing multiple dictionary lookups
         modulus = self.modulus
         choice = _choice

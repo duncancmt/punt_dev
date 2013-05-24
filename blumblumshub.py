@@ -133,11 +133,10 @@ class BlumBlumShubRandom(random.Random):
         # Essentially, p must be a "doubly safe" prime: p1 := (p-1)/2, p2 := (p1-1)/2
         # where p1 and p2 are also prime
 
-        # Only numbers with particular residues can generate a doubly safe prime
-        # by only generating candidates with those particular residues, we
+        # Only numbers with particular residues can generate a doubly safe prime.
+        # By only generating candidates with those particular residues, we
         # dramatically reduce our search space.
-        sieve_index = 15 # chosen to fit in a python int
-        sieve = Sieve(sieve_index)
+        sieve = Sieve(max(bits-certainty,64))
 
         # TODO: adjust certainty to account for the number of tests that we run
         while True:

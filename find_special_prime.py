@@ -18,11 +18,10 @@ def gen_special_prime(bits, certainty=128, random=random):
     # Essentially, p must be a "doubly safe" prime: p1 := (p-1)/2, p2 := (p1-1)/2
     # where p1 and p2 are also prime
 
-    # Only numbers with particular residues can generate a doubly safe prime
-    # by only generating candidates with those particular residues, we
+    # Only numbers with particular residues can generate a doubly safe prime.
+    # By only generating candidates with those particular residues, we
     # dramatically reduce our search space.
-    sieve_index = 15 # chosen to fit in a python int
-    sieve = Sieve(sieve_index)
+    sieve = Sieve(max(bits-certainty,64))
         
     loops = 0
     p2_pass = 0
@@ -30,10 +29,10 @@ def gen_special_prime(bits, certainty=128, random=random):
     starttime = time.time()
     lasttime = starttime
 
-    print >>sys.stderr, "Trying to find a special prime with %s bits using a sieve of index %s, size %s, advantage: %s" % (bits, sieve_index, math.log(sieve.modulus,2), sieve.advantage)
+    print >>sys.stderr, "Trying to find a special prime with %s bits using a sieve of index %s, size %s, advantage %s" % (bits, sieve.index, math.log(sieve.modulus,2), sieve.advantage)
     while True:
         loops += 1
-        if loops % (2**14) == 0: # output roughly once an hour
+        if loops % (2**13) == 0: # output roughly once an hour
             now = time.time()
             print >>sys.stderr, "%s candidates tested" % loops
             print >>sys.stderr, "%s primes found" % p2_pass
