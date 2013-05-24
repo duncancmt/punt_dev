@@ -10,7 +10,7 @@ import cPickle
 from fractions import gcd
 
 import primes
-import sieve
+from sieve import Sieve
 from brent import brent
 
 try:
@@ -136,48 +136,13 @@ class BlumBlumShubRandom(random.Random):
         # Only numbers with particular residues can generate a doubly safe prime
         # by only generating candidates with those particular residues, we
         # dramatically reduce our search space.
-        (sieve_modulus, sieve_residues) = sieve.generate(15) # chosen to fit in a single limb of a gmpy2 mpz
-                                                             # advantage: 0.007719110752972912
+        sieve_index = 15 # chosen to fit in a python int
+        sieve = Sieve(sieve_index)
 
-        if has_gmpy:
-            m = mpz(sieve_modulus)
-            sieve_residues = [ (mpz(n), map(mpz, s), mpz(e)) for (n,s,e) in sieve_residues ]
-        else:
-            m = sieve_modulus
-
-        def choice(s):
-            # random.choice is implemented wrong, so we do it ourselves
-            if len(s) == 1:
-                return s[0]
-            l = int(math.ceil(math.log(len(s),2)))
-            i = len(s)
-            while i >= len(s):
-                i = random.getrandbits(l)
-            return s[i]
-            
-        def choose_residue():
-            residue = 0
-            for (n,s,e) in sieve_residues:
-                residue = (residue + e*choice(s)) % sieve_modulus
-            assert sieve_modulus > residue
-            return int(residue)
-        
-        bits -= 2 # we'll get the low two bits by left shifting and adding one, twice
-        rand_bits = bits
-        rand_bits -= int(math.floor(math.log(sieve_modulus,2))) # we get these bits by multiplying by the modulus and adding the residue
-        rand_bits -= 1 # we always set the high bit
-        rand_bits = int(math.ceil(rand_bits))
-        bits = int(math.ceil(bits))
-            
+        # TODO: adjust certainty to account for the number of tests that we run
         while True:
             # choose a random p2 that has an allowed residue
-            p2 = random.getrandbits(rand_bits)
-            p2 |= (1 << (rand_bits))
-            p2 *= sieve_modulus
-            p2 += choose_residue()
-            if p2 >> bits:
-                continue
-    
+            p2 = sieve.make_candidate(bits, random)
             p1 = p2 * 2 + 1
             p = p1 * 2 + 1
             # first run a few abbreviated Miller-Rabin tests to fail quickly
