@@ -125,7 +125,9 @@ class BlumBlumShubRandom(random.Random):
                 self.state = pow(self.state, 2, self.modulus)
 
     @staticmethod
-    def gen_special_prime(bits, certainty=128, random=random):
+    def gen_special_prime(bits, certainty=128, random=random,
+                          callback=lambda loops, p2_pass, p1_pass, done: None,
+                          callback_period=2**13): # run callback roughly once an hour
         # In addition to the well-known constraint that p must be congruent
         # to 3, mod 4, in order to avoid short cycles, we impose the
         # additional constraints described here:
@@ -138,20 +140,31 @@ class BlumBlumShubRandom(random.Random):
         # dramatically reduce our search space.
         sieve = Sieve(max(bits-certainty,64))
 
+        loops = 0
+        p2_pass = 0
+        p1_pass = 0
+
         # TODO: adjust certainty to account for the number of tests that we run
         while True:
+            loops += 1
+            if loops % callback_period == 0:
+                callback(loops, p2_pass, p1_pass, False)
+
             # choose a random p2 that has an allowed residue
             p2 = sieve.make_candidate(bits, random)
             p1 = p2 * 2 + 1
             p = p1 * 2 + 1
             # first run a few abbreviated Miller-Rabin tests to fail quickly
             if primes.mr_test(p2, rounds=1) \
-               and primes.mr_test(p1, rounds=1) \
-               and primes.mr_test(p, rounds=1) \
-               and primes.mr_test(p2, certainty=certainty)\
-               and primes.mr_test(p1, certainty=certainty)\
-               and primes.mr_test(p, certainty=certainty):
-                break
+                   and primes.mr_test(p1, rounds=1) \
+                   and primes.mr_test(p, rounds=1):
+                if primes.mr_test(p2, certainty=certainty):
+                    p2_pass += 1
+                    if primes.mr_test(p1, certainty=certainty):
+                        p1_pass += 1
+                        if primes.mr_test(p, certainty=certainty):
+                            break
+        callback(loops, p2_pass, p1_pass, True)
         return p
     
     @staticmethod
