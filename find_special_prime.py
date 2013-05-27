@@ -17,6 +17,9 @@ lasttime = starttime
 class AllDone(Exception):
     pass
 
+class TimeoutException(Exception):
+    pass
+
 def print_status(statuses):
     global lasttime
     now = time.time()
@@ -54,15 +57,35 @@ if __name__ == "__main__":
     bits = 8192
     certainty = 256
     sieve = Sieve(max(bits-certainty,64))
+    gsp = BlumBlumShubRandom.gen_special_prime
+
     print >>sys.stderr, "Trying to find a special prime with %s bits using a sieve of index %s, size %s, advantage %s" % (bits, sieve.index, math.log(sieve.modulus,2), sieve.advantage)
+
+    # figure out how often to check in
+    checkin_seconds = 10
+    def handler(*args):
+        raise TimeoutException
+    signal.signal(signal.SIGALRM, handler)
+    signal.alarm(checkin_seconds)
+    try:
+        def trial_callback(loops, p2_pass, p1_pass, done):
+            global checkin_iterations
+            checkin_iterations = loops
+        print gsp(bits, certainty, random=random, callback=trial_callback, callback_period=1)
+        sys.exit(0)
+    except TimeoutException:
+        pass
+    signal.signal(signal.SIGALRM, signal.SIG_DFL)
+    print >>sys.stderr, "subprocesses will check in every %s iterations (%s seconds)" % (checkin_iterations, checkin_seconds)
+
+
 
     def callback(pipe):
         return (lambda *args: pipe.send(args))
     def worker(pipe):
         def thunk():
-            gsp = BlumBlumShubRandom.gen_special_prime
             pipe.send(gsp(bits, certainty, random=random,
-                          callback=callback(pipe), callback_period=10))
+                          callback=callback(pipe), callback_period=checkin_iterations))
             sys.exit(0)
         return thunk
 
