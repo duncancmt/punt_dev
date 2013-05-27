@@ -151,7 +151,7 @@ class BlumBlumShubRandom(random.Random):
                 callback(loops, p2_pass, p1_pass, False)
 
             # choose a random p2 that has an allowed residue
-            p2 = sieve.make_candidate(bits, random)
+            p2 = sieve.make_candidate(bits - 2, random) # we get the low two bits by left shifting and adding one, twice
             p1 = p2 * 2 + 1
             p = p1 * 2 + 1
             # first run a few abbreviated Miller-Rabin tests to fail quickly

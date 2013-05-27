@@ -82,8 +82,8 @@ class Sieve(object):
         modulus = self.modulus
         choice = _choice
         
-        rand_bits = bits - 2 # we'll get the low two bits by left shifting and adding one, twice
-        rand_bits -= int(math.floor(math.log(self.modulus,2))) # we get these bits by multiplying by the modulus and adding the residue
+        rand_bits = bits
+        rand_bits -= math.floor(math.log(self.modulus,2)) # we get these bits by multiplying by the modulus and adding the residue
         rand_bits -= 1 # we always set the high bit
         rand_bits = int(math.ceil(rand_bits))
         bits = int(math.ceil(bits))
@@ -97,7 +97,7 @@ class Sieve(object):
         candidate |= (1 << (rand_bits))
         candidate *= self.modulus
         candidate += residue
-        if candidate >> (bits - 2):
+        if candidate >> bits:
             return self.make_candidate(bits, random)
         else:
             return candidate
