@@ -2,6 +2,10 @@ import cProfile
 import time
 import sys
 import math
+import multiprocessing
+import select
+import operator
+import signal
 from blumblumshub import BlumBlumShubRandom
 from sieve import Sieve
 from random import SystemRandom
@@ -9,13 +13,26 @@ random = SystemRandom()
 
 starttime = time.time()
 lasttime = starttime
-def callback(loops, p2_pass, p1_pass, done):
+
+class AllDone(Exception):
+    pass
+
+def print_status(statuses):
     global lasttime
+    now = time.time()
+    intermediate_statuses = filter(lambda x: isinstance(x, tuple), statuses)
+    loops = sum(map(operator.itemgetter(0), intermediate_statuses))
+    p2_pass = sum(map(operator.itemgetter(1), intermediate_statuses))
+    p1_pass = sum(map(operator.itemgetter(2), intermediate_statuses))
+    done = reduce(operator.or_, map(operator.itemgetter(3), intermediate_statuses))
+    result = filter(lambda x: isinstance(x, (int, long)), statuses)
     if done:
         print >>sys.stderr, "Found doubly safe prime after %s iterations." % loops
-        print >>sys.stderr, "We found %s primes and %s singly safe primes." % (p2_pass, p1_pass)        
-    else:
-        now = time.time()
+        print >>sys.stderr, "We found %s primes and %s singly safe primes." % (p2_pass, p1_pass)
+    if len(result) > 0:
+        print result[0]
+        raise AllDone
+    elif now - lasttime > 3600:
         print >>sys.stderr, "%s candidates tested" % loops
         print >>sys.stderr, "%s primes found" % p2_pass
         print >>sys.stderr, "%s safe primes found" % p1_pass
@@ -36,10 +53,39 @@ def callback(loops, p2_pass, p1_pass, done):
 if __name__ == "__main__":
     bits = 8192
     certainty = 256
-    command = "print BlumBlumShubRandom.gen_special_prime(%s, %s, random=random, callback=callback, callback_period=2**10)" % (bits, certainty)
     sieve = Sieve(max(bits-certainty,64))
-
     print >>sys.stderr, "Trying to find a special prime with %s bits using a sieve of index %s, size %s, advantage %s" % (bits, sieve.index, math.log(sieve.modulus,2), sieve.advantage)
-    # exec(command)
-    cProfile.run(command)
+
+    def callback(pipe):
+        return (lambda *args: pipe.send(args))
+    def worker(pipe):
+        def thunk():
+            gsp = BlumBlumShubRandom.gen_special_prime
+            pipe.send(gsp(bits, certainty, random=random,
+                          callback=callback(pipe), callback_period=10))
+            sys.exit(0)
+        return thunk
+
+    parent_pipes = [None]*multiprocessing.cpu_count()
+    processes = [None]*len(parent_pipes)
+    epoll = select.epoll()
+    for i in xrange(len(parent_pipes)):
+        parent_pipes[i], child_pipe = multiprocessing.Pipe()
+        epoll.register(parent_pipes[i].fileno(), select.EPOLLIN)
+        processes[i] = multiprocessing.Process(target=worker(child_pipe))
+        processes[i].daemon = True
+        processes[i].start()
+    del child_pipe
+
+    statuses = [None]*len(parent_pipes)
+    try:
+        while True:
+            epoll.poll()
+            for i,parent_pipe in enumerate(parent_pipes):
+                if parent_pipe.poll():
+                    statuses[i] = parent_pipe.recv()
+            print_status(statuses)
+    except AllDone:
+        pass
+    map(operator.methodcaller("terminate"), processes)
 
