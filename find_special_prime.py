@@ -11,9 +11,6 @@ from sieve import Sieve
 from random import SystemRandom
 random = SystemRandom()
 
-starttime = time.time()
-lasttime = starttime
-
 class AllDone(Exception):
     pass
 
@@ -27,10 +24,18 @@ def print_status(statuses):
     loops = sum(map(operator.itemgetter(0), intermediate_statuses))
     p2_pass = sum(map(operator.itemgetter(1), intermediate_statuses))
     p1_pass = sum(map(operator.itemgetter(2), intermediate_statuses))
-    done = reduce(operator.or_, map(operator.itemgetter(3), intermediate_statuses))
+    done = reduce(operator.or_, map(operator.itemgetter(3), intermediate_statuses), False)
     result = filter(lambda x: isinstance(x, (int, long)), statuses)
+
+    # binomial expansion with 4 terms
+    candidate_probability = 1/(((math.log(2)*bits)**3)*sieve.advantage)
+    prob = (loops * candidate_probability)
+    prob -= float(loops*(loops-1))/2 * candidate_probability**2
+    prob += float(loops*(loops-1)*(loops-2))/6 * candidate_probability**3
+    prob -= float(loops*(loops-1)*(loops-2)*(loops-3))/24 * candidate_probability**4
+
     if done:
-        print >>sys.stderr, "Found doubly safe prime after %s iterations." % loops
+        print >>sys.stderr, "Found doubly safe prime after %s iterations (probability %s)." % (loops, prob)
         print >>sys.stderr, "We found %s primes and %s singly safe primes." % (p2_pass, p1_pass)
     if len(result) > 0:
         print result[0]
@@ -39,12 +44,6 @@ def print_status(statuses):
         print >>sys.stderr, "%s candidates tested" % loops
         print >>sys.stderr, "%s primes found" % p2_pass
         print >>sys.stderr, "%s safe primes found" % p1_pass
-        # binomial expansion with 4 terms
-        candidate_probability = 1/(((math.log(2)*bits)**3)*sieve.advantage)
-        prob = (loops * candidate_probability)
-        prob -= float(loops*(loops-1))/2 * candidate_probability**2
-        prob += float(loops*(loops-1)*(loops-2))/6 * candidate_probability**3
-        prob -= float(loops*(loops-1)*(loops-2)*(loops-3))/24 * candidate_probability**4
         print >>sys.stderr, "%s expected probability of finding prime already" % prob
         print >>sys.stderr, "%s iterations per second" % (loops / (now - starttime))
         print >>sys.stderr, "%s effective guesses per second" % ((loops / (now - starttime)) / sieve.advantage)
@@ -76,9 +75,11 @@ if __name__ == "__main__":
     except TimeoutException:
         pass
     signal.signal(signal.SIGALRM, signal.SIG_DFL)
-    print >>sys.stderr, "subprocesses will check in every %s iterations (%s seconds)" % (checkin_iterations, checkin_seconds)
+    print >>sys.stderr, "Subprocesses will check in every %s iterations (%s seconds)" % (checkin_iterations, checkin_seconds)
 
 
+    starttime = time.time()
+    lasttime = starttime
 
     def callback(pipe):
         return (lambda *args: pipe.send(args))
