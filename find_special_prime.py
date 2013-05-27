@@ -85,6 +85,7 @@ if __name__ == "__main__":
         return (lambda *args: pipe.send(args))
     def worker(pipe):
         def thunk():
+            signal.signal(signal.SIGINT, signal.SIG_IGN) # ignore Ctrl-C
             pipe.send(gsp(bits, certainty, random=random,
                           callback=callback(pipe), callback_period=checkin_iterations))
             sys.exit(0)
@@ -116,7 +117,8 @@ if __name__ == "__main__":
                 if parent_pipe.poll():
                     statuses[i] = parent_pipe.recv()
             print_status(statuses)
-    except AllDone:
+    except (AllDone, KeyboardInterrupt):
+        print >>sys.stderr, "Done! Cleaning up..."
         pass
     map(operator.methodcaller("terminate"), processes)
 
