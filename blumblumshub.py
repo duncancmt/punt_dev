@@ -93,6 +93,11 @@ class BlumBlumShubRandom(random.Random):
         self.modulus = p*q
         self.skip_modulus = lcm(p-1, q-1) # TODO: it probably isn't safe to keep this around
 
+        if has_gmpy:
+            self.modulus = mpz(self.modulus)
+            self.skip_modulus = mpz(self.skip_modulus)
+            self.state = mpz(self.state)
+
         # degeneracy test as described by
         # http://www.ciphersbyritter.com/NEWS6/BBS.HTM
         self.jumpahead(1)
@@ -108,7 +113,7 @@ class BlumBlumShubRandom(random.Random):
                 self._bit_count, self._bit_count_limit,
                 self._cache, self._cache_len,
                 self._modulus_length, self._bits_per_iteration,
-                self.modulus, self.skip_modulus, self.state)
+                int(self.modulus), int(self.skip_modulus), int(self.state))
 
     def setstate(self, state):
         (self.security, self.paranoid,
@@ -116,6 +121,11 @@ class BlumBlumShubRandom(random.Random):
          self._cache, self._cache_len,
          self._modulus_length, self._bits_per_iteration,
          self.modulus, self.skip_modulus, self.state) = state
+
+        if has_gmpy:
+            self.modulus = mpz(self.modulus)
+            self.skip_modulus = mpz(self.skip_modulus)
+            self.state = mpz(self.state)
 
     def jumpahead(self, n):
         if self.skip_modulus is not None:
