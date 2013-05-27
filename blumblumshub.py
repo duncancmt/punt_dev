@@ -113,19 +113,21 @@ class BlumBlumShubRandom(random.Random):
                 self._bit_count, self._bit_count_limit,
                 self._cache, self._cache_len,
                 self._modulus_length, self._bits_per_iteration,
-                int(self.modulus), int(self.skip_modulus), int(self.state))
+                int(self.modulus), int(self.state),
+                int(self.skip_modulus) if self.skip_modulus is not None else None)
 
     def setstate(self, state):
         (self.security, self.paranoid,
          self._bit_count, self._bit_count_limit,
          self._cache, self._cache_len,
          self._modulus_length, self._bits_per_iteration,
-         self.modulus, self.skip_modulus, self.state) = state
+         self.modulus, self.state, self.skip_modulus) = state
 
         if has_gmpy:
             self.modulus = mpz(self.modulus)
-            self.skip_modulus = mpz(self.skip_modulus)
             self.state = mpz(self.state)
+            if self.skip_modulus is not None:
+                self.skip_modulus = mpz(self.skip_modulus)
 
     def jumpahead(self, n):
         if self.skip_modulus is not None:
