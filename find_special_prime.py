@@ -104,7 +104,14 @@ if __name__ == "__main__":
     statuses = [None]*len(parent_pipes)
     try:
         while True:
-            epoll.poll()
+            try:
+                epoll.poll()
+            except IOError as e:
+                import errno
+                if e.errno == errno.EINTR: # Interrupted syscall
+                    continue
+                else:
+                    raise
             for i,parent_pipe in enumerate(parent_pipes):
                 if parent_pipe.poll():
                     statuses[i] = parent_pipe.recv()
