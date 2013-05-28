@@ -61,22 +61,24 @@ if __name__ == "__main__":
     print >>sys.stderr, "Trying to find a special prime with %s bits using a sieve of index %s, size %s, advantage %s" % (bits, sieve.index, math.log(sieve.modulus,2), sieve.advantage)
 
     # figure out how often to check in
-    checkin_seconds = 10
+    checkin_seconds = 5
+    checkin_iterations = None
     def handler(*args):
         raise TimeoutException
     signal.signal(signal.SIGALRM, handler)
     signal.alarm(checkin_seconds)
-    try:
-        def trial_callback(loops, p2_pass, p1_pass, done):
-            global checkin_iterations
-            checkin_iterations = loops
-        print gsp(bits, certainty, random=random, callback=trial_callback, callback_period=1)
-        sys.exit(0)
-    except TimeoutException:
-        pass
-    signal.signal(signal.SIGALRM, signal.SIG_DFL)
+    while checkin_iterations is None:
+        checkin_seconds *= 2
+        try:
+            def trial_callback(loops, p2_pass, p1_pass, done):
+                global checkin_iterations
+                checkin_iterations = loops
+            print gsp(bits, certainty, random=random, callback=trial_callback, callback_period=1)
+            sys.exit(0)
+        except TimeoutException:
+            pass
     print >>sys.stderr, "Subprocesses will check in every %s iterations (%s seconds)" % (checkin_iterations, checkin_seconds)
-
+    signal.signal(signal.SIGALRM, signal.SIG_DFL)
 
     starttime = time.time()
     lasttime = starttime
