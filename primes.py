@@ -10,7 +10,7 @@ except ImportError:
         has_gmpy = True
     except ImportError:
         import warnings
-        warnings.warn("Not having gmpy2 or gmpy makes this slow as hell")
+        warnings.warn("Not having gmpy2 or gmpy makes this at least 10x slower")
         has_gmpy = False
 
 def gen_prime(bits=256, certainty=128, random=random):
