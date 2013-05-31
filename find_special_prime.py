@@ -7,12 +7,21 @@ import multiprocessing
 import select
 import operator
 import signal
+import errno
 from blumblumshub import BlumBlumShubRandom
 from sieve import Sieve
 from random import SystemRandom
 random = SystemRandom()
 
-old_loops, old_p2_pass, old_p1_pass = cPickle.Unpickler(open('status.pkl','r')).load()
+status_filename = (sys.argv[1] if len(sys.argv) > 1 else 'status.pkl')
+
+try:
+    old_loops, old_p2_pass, old_p1_pass = cPickle.Unpickler(open(status_filename,'r')).load()
+except IOError as e:
+    if e.errno == errno.ENOENT:
+        old_loops, old_p2_pass, old_p1_pass = (0, 0, 0)
+    else:
+        raise
 
 class AllDone(Exception):
     pass
@@ -120,7 +129,6 @@ if __name__ == "__main__":
             try:
                 epoll.poll()
             except IOError as e:
-                import errno
                 if e.errno == errno.EINTR: # Interrupted syscall
                     continue
                 else:
@@ -138,7 +146,7 @@ if __name__ == "__main__":
         loops = sum(map(operator.itemgetter(0), intermediate_statuses)) + old_loops
         p2_pass = sum(map(operator.itemgetter(1), intermediate_statuses)) + old_p2_pass
         p1_pass = sum(map(operator.itemgetter(2), intermediate_statuses)) + old_p1_pass
-        cPickle.Pickler(open('status.pkl','w'),-1).dump((loops, p2_pass, p1_pass))
+        cPickle.Pickler(open(status_filename,'w'),-1).dump((loops, p2_pass, p1_pass))
         map(operator.methodcaller("terminate"), processes)
         print >>sys.stderr, "done."
 
