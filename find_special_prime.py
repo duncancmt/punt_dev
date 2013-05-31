@@ -24,7 +24,8 @@ def print_status(statuses):
     global lasttime
     now = time.time()
     intermediate_statuses = filter(lambda x: isinstance(x, tuple), statuses)
-    loops = sum(map(operator.itemgetter(0), intermediate_statuses)) + old_loops
+    real_loops = sum(map(operator.itemgetter(0), intermediate_statuses))
+    loops = real_loops + old_loops
     p2_pass = sum(map(operator.itemgetter(1), intermediate_statuses)) + old_p2_pass
     p1_pass = sum(map(operator.itemgetter(2), intermediate_statuses)) + old_p1_pass
     done = reduce(operator.or_, map(operator.itemgetter(3), intermediate_statuses), False)
@@ -48,8 +49,8 @@ def print_status(statuses):
         print >>sys.stderr, "%s primes found" % p2_pass
         print >>sys.stderr, "%s safe primes found" % p1_pass
         print >>sys.stderr, "%s expected probability of finding prime already" % prob
-        print >>sys.stderr, "%s iterations per second" % (loops / (now - starttime))
-        print >>sys.stderr, "%s effective guesses per second" % ((loops / (now - starttime)) / sieve.advantage)
+        print >>sys.stderr, "%s iterations per second" % (real_loops / (now - starttime))
+        print >>sys.stderr, "%s effective guesses per second" % ((real_loops / (now - starttime)) / sieve.advantage)
         print >>sys.stderr, "%s seconds since last output" % (now - lasttime)
         print >>sys.stderr
         lasttime = now
