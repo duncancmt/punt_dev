@@ -1,4 +1,5 @@
 import cProfile
+import cPickle
 import time
 import sys
 import math
@@ -11,6 +12,8 @@ from sieve import Sieve
 from random import SystemRandom
 random = SystemRandom()
 
+old_loops, old_p2_pass, old_p1_pass = cPickle.Unpickler(open('status.pkl','r')).load()
+
 class AllDone(Exception):
     pass
 
@@ -21,9 +24,9 @@ def print_status(statuses):
     global lasttime
     now = time.time()
     intermediate_statuses = filter(lambda x: isinstance(x, tuple), statuses)
-    loops = sum(map(operator.itemgetter(0), intermediate_statuses))
-    p2_pass = sum(map(operator.itemgetter(1), intermediate_statuses))
-    p1_pass = sum(map(operator.itemgetter(2), intermediate_statuses))
+    loops = sum(map(operator.itemgetter(0), intermediate_statuses)) + old_loops
+    p2_pass = sum(map(operator.itemgetter(1), intermediate_statuses)) + old_p2_pass
+    p1_pass = sum(map(operator.itemgetter(2), intermediate_statuses)) + old_p1_pass
     done = reduce(operator.or_, map(operator.itemgetter(3), intermediate_statuses), False)
     result = filter(lambda x: isinstance(x, (int, long)), statuses)
 
@@ -120,7 +123,15 @@ if __name__ == "__main__":
                     statuses[i] = parent_pipe.recv()
             print_status(statuses)
     except (AllDone, KeyboardInterrupt):
-        print >>sys.stderr, "Done! Cleaning up..."
         pass
-    map(operator.methodcaller("terminate"), processes)
+    finally:
+        print >>sys.stderr
+        print >>sys.stderr, "Time to go! Cleaning up...",
+        intermediate_statuses = filter(lambda x: isinstance(x, tuple), statuses)
+        loops = sum(map(operator.itemgetter(0), intermediate_statuses)) + old_loops
+        p2_pass = sum(map(operator.itemgetter(1), intermediate_statuses)) + old_p2_pass
+        p1_pass = sum(map(operator.itemgetter(2), intermediate_statuses)) + old_p1_pass
+        cPickle.Pickler(open('status.pkl','w'),-1).dump((loops, p2_pass, p1_pass))
+        map(operator.methodcaller("terminate"), processes)
+        print >>sys.stderr, "done."
 
