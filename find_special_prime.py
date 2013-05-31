@@ -20,7 +20,7 @@ class AllDone(Exception):
 class TimeoutException(Exception):
     pass
 
-def print_status(statuses):
+def print_status(statuses, force=False):
     global lasttime
     now = time.time()
     intermediate_statuses = filter(lambda x: isinstance(x, tuple), statuses)
@@ -44,7 +44,7 @@ def print_status(statuses):
     if len(result) > 0:
         print result[0]
         raise AllDone
-    elif now - lasttime > 3600:
+    elif force or now - lasttime > 3600:
         print >>sys.stderr, "%s candidates tested" % loops
         print >>sys.stderr, "%s primes found" % p2_pass
         print >>sys.stderr, "%s safe primes found" % p1_pass
@@ -92,6 +92,7 @@ if __name__ == "__main__":
     def worker(pipe):
         def thunk():
             signal.signal(signal.SIGINT, signal.SIG_IGN) # ignore Ctrl-C
+            signal.signal(signal.SIGQUIT, signal.SIG_IGN) # ignore Ctrl-\
             pipe.send(gsp(bits, certainty, random=random,
                           callback=callback(pipe), callback_period=checkin_iterations))
             sys.exit(0)
@@ -109,6 +110,11 @@ if __name__ == "__main__":
     del child_pipe
 
     statuses = [None]*len(parent_pipes)
+
+    def handler(*args):
+        print_status(statuses, True)
+    signal.signal(signal.SIGQUIT, handler)
+
     try:
         while True:
             try:
@@ -122,7 +128,7 @@ if __name__ == "__main__":
             for i,parent_pipe in enumerate(parent_pipes):
                 if parent_pipe.poll():
                     statuses[i] = parent_pipe.recv()
-            print_status(statuses)
+            print_status(statuses, False)
     except (AllDone, KeyboardInterrupt):
         pass
     finally:
