@@ -41,6 +41,7 @@ def print_status(statuses, force=False):
     result = filter(lambda x: isinstance(x, (int, long)), statuses)
 
     # binomial expansion with 4 terms
+    # TODO: this is imprecise for small values of bits
     candidate_probability = 1/(((math.log(2)*bits)**3)*sieve.advantage)
     prob = (loops * candidate_probability)
     prob -= float(loops*(loops-1))/2 * candidate_probability**2
@@ -121,6 +122,7 @@ if __name__ == "__main__":
     statuses = [None]*len(parent_pipes)
 
     def handler(*args):
+        print >>sys.stderr
         print_status(statuses, True)
     signal.signal(signal.SIGQUIT, handler)
 
