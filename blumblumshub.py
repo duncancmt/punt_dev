@@ -11,7 +11,6 @@ from fractions import gcd
 
 import primes
 from sieve import Sieve
-from brent import brent
 
 try:
     from gmpy2 import mpz
@@ -28,7 +27,7 @@ def lcm(a,b):
     
 class BlumBlumShubRandom(random.Random):
     def __init__(self, security, bits_to_supply=2**20, tolerance=0.5,
-                 seed=None, paranoid=True, state=None):
+                 seed=None, paranoid=True, _state=None):
         """
         Arguments:
             security: The log (base 2) of the number of operations required to distinguish BBS output from random noise.
@@ -36,10 +35,10 @@ class BlumBlumShubRandom(random.Random):
             bits_to_supply: The number of bits that this RNG will be expected to produce securely. Default: 2**20
             seed: Deterministically initializes the RNG. Must be a long or integer with length 2*security. (Optional)
             paranoid: If paranoid is true, this RNG will raise a RuntimeError if asked to supply >bits_to_supply bits
-            state: If supplied, we skip normal initialization and use the supplied state instead. (Optional)
+            _state: If supplied, we skip normal initialization and use the supplied state instead. (Optional)
         """
-        if state is not None:
-            self.setstate(state)
+        if _state is not None:
+            self.setstate(_state)
         else:
             self.security = security
             self.paranoid = paranoid
@@ -50,12 +49,19 @@ class BlumBlumShubRandom(random.Random):
             
             (self._modulus_length, self._bits_per_iteration) = self.optimal_parameters(self.security, self._bit_count_limit, tolerance)
 
+            # python random.SystemRandom() is unsuitable because it uses /dev/urandom
             if seed is None:
                 seed = 0L
                 with open('/dev/random','r') as randfile:
                     for i in xrange(int(math.ceil(2*self.security / 8.0))):
                         seed |= struct.unpack('B', randfile.read(1))[0] << i*8
             self.seed(seed)
+
+    @classmethod
+    def from_state(cls, state):
+        """Create a BlumBlumShubRandom instance from a state tuple"""
+        return cls(security=None, bits_to_supply=None, tolerance=None,
+                   seed=None, paranoid=None, _state=state)
 
     def random(self):
         return float(self.getrandbits(53)) / 2**53
@@ -195,56 +201,46 @@ class BlumBlumShubRandom(random.Random):
         M = Decimal(M)
         epsilon = Decimal(epsilon)
         maxn = Decimal(maxn)
-    
+        minn = Decimal(64)
     
         def attack_difficulty(n, j):
-            # print "Finding attack difficulty:"
             n = Decimal(n)
             j = Decimal(j)
             ln2 = Decimal(2).ln()
             
-            # number of clock cycles required to factor an integer of bit length n
+            # number of operations required by GNFS to factor an integer of bit length n
             # See equation (8) in http://www.win.tue.nl/~berry/papers/ima05bbs.pdf
-            # print "	n*ln2: %s" % (n*ln2)
-            # print "	ln(n*ln2): %s" % (n*ln2).ln()
-
-            gamma = Decimal('2.8e-3')
+            gamma = Decimal('2.8e-3') # empirically determined in the above paper
+                                      # ECRYPT suggests a value of 8.315e-7 (http://www.ecrypt.eu.org/documents/D.SPA.20.pdf)
             tmp1 = (Decimal(64)/9)**(Decimal(1)/3)
             tmp2 = (n*ln2)**(Decimal(1)/3)
             tmp3 = ((n*ln2).ln())**(Decimal(2)/3)
             L = gamma*(tmp1*tmp2*tmp3).exp()
 
-            # balls = (Decimal(64)/9)**(Decimal(1)/3) * (n*ln2)**(Decimal(1)/3) * ((n*ln2).ln())**(Decimal(2)/3)
-            # print "	fuck-balls: %s" % (fuck-balls)
-            # print "	difference: %s" % abs(L - 2**( balls - 14))
-
-            
             # difficulty of distinguishing BBS from a random sequence
             # See equation (9) in http://www.win.tue.nl/~berry/papers/ima05bbs.pdf
-            # print "	j: %s" % j
-            # print "	M: %s" % M
-            # print "	epsilon: %s" % epsilon
             delta = epsilon/((2**j - 1) * M)
-            # print "	delta: %s" % delta
             left = (L * delta**2)/(36 * n * (n.ln()/ln2))
             right = 2**(2*j+9) * n / (delta**4)
-            # print "	left: %s" % left
-            # print "	right: %s" % right
-            retval = left - right
-            # print "	attack difficulty: %s" % retval
-            return retval
+            return left - right
     
         def find_n(j):
-            # print "Finding n:"
-            brack = (Decimal(64), maxn)
-            #brack = (brack[0], (brack[0]+brack[1])/2, brack[1])
-            n = brent(lambda n: abs(attack_difficulty(n, j) - 2**log_Ta).ln(),
-                      brack, rtol=Decimal('0.1'))
-            n = n.to_integral_value(decimal.ROUND_CEILING)
+            upper = maxn
+            lower = minn
+            n = None
+            while upper > lower:
+                n = (upper + lower)/2
+                n = n.to_integral_value(decimal.ROUND_CEILING)
+                if attack_difficulty(n, j) > 2**log_Ta:
+                    if n == upper:
+                        # because of the ceiling, we can get stuck here
+                        break
+                    upper = n
+                else:
+                    lower = n
+                    
             n += n % 2 # force n to be even
-            print "For j = %s, found n = %s" % (j, n)
             assert 2**log_Ta <= attack_difficulty(n, j)
-            # print "	n: %s" % n
             return n
         
         def work_per_bit(j):
@@ -254,17 +250,29 @@ class BlumBlumShubRandom(random.Random):
     
         with decimal.localcontext() as ctx:
             ctx.prec = 200
-            brack = (Decimal(1), maxn.ln()/Decimal(2).ln())
-            #brack = (brack[0], (brack[0]+brack[1])/2, brack[1])
-            j = brent(work_per_bit, brack, rtol=Decimal('0.1'))
-            j = j.to_integral_value(decimal.ROUND_FLOOR)
-            print "Found j = %s" % j
+            maxj = (maxn.ln()/Decimal(2).ln()).to_integral_value(decimal.ROUND_FLOOR)
+            upper = maxj
+            lower = Decimal(1)
+            j = None
+            # valley finding
+            while upper > lower:
+                j = (upper + lower)/2
+                j = j.to_integral_value(decimal.ROUND_FLOOR)
+                work = work_per_bit(j)
+                if work_per_bit(j-1) < work:
+                    upper = j
+                elif work_per_bit(j+1) < work:
+                    if lower == j:
+                        # because of the floor, we can get stuck here
+                        break
+                    lower = j
+                else:
+                    break
+
             n = find_n(j) # TODO: this does extra work
-            print "Found j = %s" % j
-            print "Found n = %s" % n
-            print "attack_difficulty: %s" % attack_difficulty(n, j)
-            print "minimum attack difficulty: %s" % 2**log_Ta
             assert 2**log_Ta <= attack_difficulty(n, j)
+            assert work_per_bit(j-1) > work_per_bit(j)
+            assert work_per_bit(j+1) > work_per_bit(j)
             n = int(n)
             j = int(j)
             return (n, j)
