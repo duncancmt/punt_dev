@@ -1,3 +1,6 @@
+"""Almost all of this file stolen from SciPy"""
+
+
 import math
 from decimal import Decimal
 
