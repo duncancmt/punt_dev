@@ -2,11 +2,11 @@ import random
 import math
 
 try:
-    from gmpy2 import mpz,is_prime
+    from gmpy2 import mpz as _mpz, is_prime as _is_prime
     has_gmpy = True
 except ImportError:
     try:
-        from gmpy import mpz,is_prime
+        from gmpy import mpz as _mpz, is_prime as _is_prime
         has_gmpy = True
     except ImportError:
         import warnings
@@ -44,8 +44,8 @@ def mr_test(n, certainty=128, rounds=None, slow=False):
         return False
 
     if has_gmpy and not slow:
-        n = mpz(n)
-        return is_prime(n, rounds)
+        n = _mpz(n)
+        return _is_prime(n, rounds)
 
     # turn (n-1) into (2**s) * m
     s = 0
@@ -70,3 +70,4 @@ def mr_test(n, certainty=128, rounds=None, slow=False):
             return False
     return True
 
+__all__ = ['gen_prime', 'mr_test']
