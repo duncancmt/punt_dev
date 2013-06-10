@@ -192,7 +192,7 @@ class BlumBlumShubRandom(random.Random):
             log_Ta: Log (base 2) of the number of operations required to distinguish BBS output from random noise.
             M: Number of bits that this instance of BBS will output. If more than M bits are extracted from this instance, security guarantees are invalidated.
             epsilon: Also called the tolerance. The difference between the probability that the sequence produced by BBS be declared non-random and the probability that a truly random sequence will be declared non-random.
-            maxn: Maximum bit-length of the modulus. Default: 2**16
+            maxn: Maximum bit-length of the modulus. Default: 2**32
         Returns:
             A tuple of (bit-length of modulus (n), bits to extract per cycle (j))
         """
@@ -251,7 +251,7 @@ class BlumBlumShubRandom(random.Random):
         with decimal.localcontext() as ctx:
             ctx.prec = 200
             maxj = (maxn.ln()/Decimal(2).ln()).to_integral_value(decimal.ROUND_FLOOR)
-            upper = maxj
+            upper = maxj+1 # we can never actually select this value because of the floor
             lower = Decimal(1)
             j = None
             # valley finding
@@ -271,8 +271,8 @@ class BlumBlumShubRandom(random.Random):
 
             n = find_n(j) # TODO: this does extra work
             assert 2**log_Ta <= attack_difficulty(n, j)
-            assert work_per_bit(j-1) > work_per_bit(j)
-            assert work_per_bit(j+1) > work_per_bit(j)
+            assert work_per_bit(j-1) >= work_per_bit(j) or j == maxj
+            assert work_per_bit(j+1) >= work_per_bit(j) or j == maxj
             n = int(n)
             j = int(j)
             return (n, j)
