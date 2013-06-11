@@ -201,7 +201,6 @@ class BlumBlumShubRandom(random.Random):
         M = Decimal(M)
         epsilon = Decimal(epsilon)
         maxn = Decimal(maxn)
-        minn = Decimal(64)
     
         def attack_difficulty(n, j):
             n = Decimal(n)
@@ -209,9 +208,11 @@ class BlumBlumShubRandom(random.Random):
             ln2 = Decimal(2).ln()
             
             # number of operations required by GNFS to factor an integer of bit length n
-            # See equation (8) in http://www.win.tue.nl/~berry/papers/ima05bbs.pdf
-            gamma = Decimal('2.8e-3') # empirically determined in the above paper
-                                      # ECRYPT suggests a value of 8.315e-7 (http://www.ecrypt.eu.org/documents/D.SPA.20.pdf)
+            # Equation (8) in http://www.win.tue.nl/~berry/papers/ima05bbs.pdf recommends
+            # gamma = 2.8e-3. However, ECRYPT is a better authority on the subject.
+            # Section 6.2.1 of ECRYPT 2012 suggests gamma = 2**-14 to 2**-12
+            # See: http://www.ecrypt.eu.org/documents/D.SPA.20.pdf
+            gamma = Decimal(1)/2**14
             tmp1 = (Decimal(64)/9)**(Decimal(1)/3)
             tmp2 = (n*ln2)**(Decimal(1)/3)
             tmp3 = ((n*ln2).ln())**(Decimal(2)/3)
@@ -226,7 +227,7 @@ class BlumBlumShubRandom(random.Random):
     
         def find_n(j):
             upper = maxn
-            lower = minn
+            lower = 2**j
             n = None
             while upper > lower:
                 n = (upper + lower)/2
