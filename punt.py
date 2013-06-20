@@ -6,7 +6,7 @@ from operator import methodcaller
 from blumblumshub import BlumBlumShubRandom
 
 if len(sys.argv) != 3:
-    print >>sys.stderr, "Usage: %s SEEDS_FILE USERNAMES_FILE"
+    print >>sys.stderr, "Usage: %s SEEDS_FILE USERNAMES_FILE" % sys.argv[0]
     print >>sys.stderr
     print >>sys.stderr, "USERNAMES_FILE should have one username per line."
     print >>sys.stderr, "First seniors, then an empty line, juniors, then an empty line, sophomores"
