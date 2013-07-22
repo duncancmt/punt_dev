@@ -12,6 +12,7 @@ from fractions import gcd
 import primes
 from memoize import memoize
 from sieve import Sieve
+from correct_random import CorrectRandom
 
 try:
     from gmpy2 import mpz
@@ -26,7 +27,7 @@ except ImportError:
 def lcm(a,b):
     return (a * b) // gcd(a,b)    
     
-class BlumBlumShubRandom(random.Random):
+class BlumBlumShubRandom(CorrectRandom):
     def __init__(self, security, bits_to_supply=2**20, tolerance=0.5,
                  seed=None, paranoid=True, _state=None):
         """
@@ -63,9 +64,6 @@ class BlumBlumShubRandom(random.Random):
         """Create a BlumBlumShubRandom instance from a state tuple"""
         return cls(security=None, bits_to_supply=None, tolerance=None,
                    seed=None, paranoid=None, _state=state)
-
-    def random(self):
-        return float(self.getrandbits(53)) / 2**53
 
     def getrandbits(self,n):
         if (not self.paranoid) or self._bit_count + n < self._bit_count_limit:
