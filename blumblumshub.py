@@ -10,6 +10,7 @@ import cPickle
 from fractions import gcd
 
 import primes
+from memoize import memoize
 from sieve import Sieve
 
 try:
@@ -202,6 +203,7 @@ class BlumBlumShubRandom(random.Random):
         epsilon = Decimal(epsilon)
         maxn = Decimal(maxn)
     
+        @memoize
         def attack_difficulty(n, j):
             n = Decimal(n)
             j = Decimal(j)
@@ -224,7 +226,8 @@ class BlumBlumShubRandom(random.Random):
             left = (L * delta**2)/(36 * n * (n.ln()/ln2))
             right = 2**(2*j+9) * n / (delta**4)
             return left - right
-    
+
+        @memoize
         def find_n(j):
             upper = maxn
             lower = 2**j
@@ -243,7 +246,8 @@ class BlumBlumShubRandom(random.Random):
             n += n % 2 # force n to be even
             assert 2**log_Ta <= attack_difficulty(n, j)
             return n
-        
+
+        @memoize
         def work_per_bit(j):
             # See section 7.3 in http://www.win.tue.nl/~berry/papers/ima05bbs.pdf
             n = find_n(j)
@@ -270,7 +274,7 @@ class BlumBlumShubRandom(random.Random):
                 else:
                     break
 
-            n = find_n(j) # TODO: this does extra work
+            n = find_n(j)
             assert 2**log_Ta <= attack_difficulty(n, j)
             assert work_per_bit(j-1) >= work_per_bit(j) or j == maxj
             assert work_per_bit(j+1) >= work_per_bit(j) or j == maxj
