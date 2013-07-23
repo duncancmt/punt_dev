@@ -1,6 +1,6 @@
 from __future__ import division
 from random import Random, BPF
-from proxy import BasicProxy
+from proxy import BetterProxy
 from math import ceil as _ceil, log as _log
 
 class CorrectRandom(Random):
@@ -83,7 +83,7 @@ class CorrectRandom(Random):
         return result
 
 
-class CorrectRandomWrapper(CorrectRandom, BasicProxy):
+class CorrectRandomWrapper(CorrectRandom, BetterProxy):
     def __init__(self, obj):
         object.__setattr__(self, "_obj", obj)
 
