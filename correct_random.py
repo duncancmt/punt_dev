@@ -1,5 +1,6 @@
 from __future__ import division
 from random import Random, BPF
+from proxy import BasicProxy
 from math import ceil as _ceil, log as _log
 
 class CorrectRandom(Random):
@@ -80,3 +81,10 @@ class CorrectRandom(Random):
                     raise
                 return self.sample(tuple(population), k)
         return result
+
+
+class CorrectRandomWrapper(CorrectRandom, BasicProxy):
+    def __init__(self, obj):
+        object.__setattr__(self, "_obj", obj)
+
+__all__ = ["CorrectRandom", "CorrectRandomWrapper"]
