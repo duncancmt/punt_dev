@@ -8,8 +8,7 @@ import select
 import operator
 import signal
 import errno
-from blumblumshub import BlumBlumShubRandom
-from shower import Shower
+from blumblumshub import BlumBlumShubRandom, Shower
 from random import SystemRandom
 random = SystemRandom()
 
