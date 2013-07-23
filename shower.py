@@ -12,13 +12,13 @@ def generate_naive(i):
     Generate the exhaustive list of all residues mod the i'th primorial that do not obviously violate primality
     returns a tuple (i'th primorial, list of residues)
     """
-    pairs = [ (n,set(Sieve._allowed_residues(n))) for n in primes[:i]]
+    pairs = [ (n,set(Shower._allowed_residues(n))) for n in primes[:i]]
     m = reduce(operator.mul, map(operator.itemgetter(0), pairs))
     residues = [ r for r in xrange(m)
                  if all(map(lambda (n,rs): (r % n) in rs, pairs)) ]
     return (m,residues)
 
-class Sieve(object):
+class Shower(object):
     """An efficient way of representing the allowed residues for the i'th primorial"""
     def __init__(self, mod_bits):
         """Argument mod_bits is the maximum length of the modulus"""
@@ -94,7 +94,7 @@ class Sieve(object):
                  if second_residues[i] != 0 ]
 
     def _check(self):
-        """Check this sieve against the naive implementation. For i>8, takes huge amounts of time."""
+        """Check this shower against the naive implementation. For i>8, takes huge amounts of time."""
         residues = list()
         for j in product(*map(operator.itemgetter(1), self.residues)):
             residue = 0
@@ -107,4 +107,4 @@ class Sieve(object):
         assert (m == self.modulus and residues == other_residues)
 
 
-__all__ = ["Sieve", "generate_naive"]
+__all__ = ["Shower", "generate_naive"]

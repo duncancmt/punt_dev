@@ -9,7 +9,7 @@ import operator
 import signal
 import errno
 from blumblumshub import BlumBlumShubRandom
-from sieve import Sieve
+from shower import Shower
 from random import SystemRandom
 random = SystemRandom()
 
@@ -42,7 +42,7 @@ def print_status(statuses, force=False):
 
     # binomial expansion with 4 terms
     # TODO: this is imprecise for small values of bits
-    candidate_probability = 1/(((math.log(2)*bits)**3)*sieve.advantage)
+    candidate_probability = 1/(((math.log(2)*bits)**3)*shower.advantage)
     prob = (loops * candidate_probability)
     prob -= float(loops*(loops-1))/2 * candidate_probability**2
     prob += float(loops*(loops-1)*(loops-2))/6 * candidate_probability**3
@@ -60,7 +60,7 @@ def print_status(statuses, force=False):
         print >>sys.stderr, "%s safe primes found" % p1_pass
         print >>sys.stderr, "%s expected probability of finding prime already" % prob
         print >>sys.stderr, "%s iterations per second" % (real_loops / (now - starttime))
-        print >>sys.stderr, "%s effective guesses per second" % ((real_loops / (now - starttime)) / sieve.advantage)
+        print >>sys.stderr, "%s effective guesses per second" % ((real_loops / (now - starttime)) / shower.advantage)
         print >>sys.stderr, "%s seconds since last output" % (now - lasttime)
         print >>sys.stderr
         lasttime = now
@@ -69,10 +69,10 @@ def print_status(statuses, force=False):
 if __name__ == "__main__":
     bits = 8192
     certainty = 256
-    sieve = Sieve(max(bits-certainty,64))
+    shower = Shower(max(bits-certainty,64))
     gsp = BlumBlumShubRandom.gen_special_prime
 
-    print >>sys.stderr, "Trying to find a special prime with %s bits using a sieve of index %s, size %s, advantage %s" % (bits, sieve.index, math.log(sieve.modulus,2), sieve.advantage)
+    print >>sys.stderr, "Trying to find a special prime with %s bits using a shower of index %s, size %s, advantage %s" % (bits, shower.index, math.log(shower.modulus,2), shower.advantage)
 
     # figure out how often to check in
     checkin_seconds = 5

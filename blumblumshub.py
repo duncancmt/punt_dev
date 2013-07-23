@@ -10,7 +10,7 @@ from fractions import gcd
 
 import primes
 from memoize import memoize
-from sieve import Sieve
+from shower import Shower
 from correct_random import CorrectRandom
 
 try:
@@ -156,7 +156,7 @@ class BlumBlumShubRandom(CorrectRandom):
         # Only numbers with particular residues can generate a doubly safe prime.
         # By only generating candidates with those particular residues, we
         # dramatically reduce our search space.
-        sieve = Sieve(max(bits-certainty,64))
+        shower = Shower(max(bits-certainty,64))
 
         loops = 0
         p2_pass = 0
@@ -169,7 +169,7 @@ class BlumBlumShubRandom(CorrectRandom):
                 callback(loops, p2_pass, p1_pass, False)
 
             # choose a random p2 that has an allowed residue
-            p2 = sieve.make_candidate(bits - 2, random) # we get the low two bits by left shifting and adding one, twice
+            p2 = shower.make_candidate(bits - 2, random) # we get the low two bits by left shifting and adding one, twice
             p1 = p2 * 2 + 1
             p = p1 * 2 + 1
             # first run a few abbreviated Miller-Rabin tests to fail quickly
