@@ -4,7 +4,6 @@ import decimal
 from decimal import Decimal
 
 import math
-import random
 import struct
 import cPickle
 from fractions import gcd
@@ -23,6 +22,8 @@ except ImportError:
         has_gmpy = True
     except ImportError:
         has_gmpy = False
+
+random = CorrectRandom()
 
 def lcm(a,b):
     return (a * b) // gcd(a,b)    

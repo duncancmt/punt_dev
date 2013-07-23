@@ -5,37 +5,14 @@ import math
 from itertools import *
 
 primes = cPickle.Unpickler(open("10000_primes.pkl")).load()
-log_max_primorial = 150606
-
-def _successors(n, s):
-    return [ (2*i + 1) % n for i in s ]
-
-def _allowed_residues(n):
-    """For a given number n, find the allowed residues mod n that will not obviously invalidate primality"""
-    possibilities = range(n)
-    first_residues = _successors(n, possibilities)
-    second_residues = _successors(n, first_residues)
-    return [ r for (i, r) in enumerate(possibilities)
-             if r != 0
-             if first_residues[i] != 0
-             if second_residues[i] != 0 ]
-
-def _choice(s):
-    # random.choice is implemented wrong, so we do it ourselves
-    if len(s) == 1:
-        return s[0]
-    l = int(math.ceil(math.log(len(s),2)))
-    i = len(s)
-    while i >= len(s):
-        i = random.getrandbits(l)
-    return s[i]
+log_max_primorial = int(math.log(reduce(operator.mul, primes), 2))
 
 def generate_naive(i):
     """
     Generate the exhaustive list of all residues mod the i'th primorial that do not obviously violate primality
     returns a tuple (i'th primorial, list of residues)
     """
-    pairs = [ (n,set(_allowed_residues(n))) for n in primes[:i]]
+    pairs = [ (n,set(Sieve._allowed_residues(n))) for n in primes[:i]]
     m = reduce(operator.mul, map(operator.itemgetter(0), pairs))
     residues = [ r for r in xrange(m)
                  if all(map(lambda (n,rs): (r % n) in rs, pairs)) ]
@@ -51,7 +28,7 @@ class Sieve(object):
         min_index = 1
         index = None
         while max_index > min_index:
-            index = (max_index + min_index) / 2
+            index = (max_index + min_index) // 2
             m = reduce(operator.mul, primes[:index])
             if m >> mod_bits:
                 # too big
@@ -69,7 +46,7 @@ class Sieve(object):
         assert (1 << mod_bits) < reduce(operator.mul, primes[:index+1])
         self.index = index = int(round(index))
         self.modulus = m
-        self.residues = [ (n, _allowed_residues(n), ((m*pow(m/n,n-2,n))/n) % m) for n in primes[:index] ]
+        self.residues = [ (n, self._allowed_residues(n), ((m*pow(m/n,n-2,n))/n) % m) for n in primes[:index] ]
         num_residues = reduce(operator.mul, map(len, map(operator.itemgetter(1), self.residues)))
         try:
             self.advantage = float(num_residues) / self.modulus
@@ -80,7 +57,6 @@ class Sieve(object):
         """Argument bits is the maximum length of the candidate generated"""
         # avoid doing multiple dictionary lookups
         modulus = self.modulus
-        choice = _choice
         
         rand_bits = bits
         rand_bits -= math.floor(math.log(self.modulus,2)) # we get these bits by multiplying by the modulus and adding the residue
@@ -90,7 +66,7 @@ class Sieve(object):
 
         residue = 0
         for (n,s,e) in self.residues:
-            residue = (residue + e*choice(s)) % modulus
+            residue = (residue + e*random.choice(s)) % modulus
         assert modulus > residue
 
         candidate = random.getrandbits(rand_bits)
@@ -101,6 +77,21 @@ class Sieve(object):
             return self.make_candidate(bits, random)
         else:
             return candidate
+
+    @static
+    def _successors(n, s):
+        return [ (2*i + 1) % n for i in s ]
+
+    @classmethod
+    def _allowed_residues(cls, n):
+        """For a given number n, find the allowed residues mod n that will not obviously invalidate primality"""
+        possibilities = range(n)
+        first_residues = cls._successors(n, possibilities)
+        second_residues = cls._successors(n, first_residues)
+        return [ r for (i, r) in enumerate(possibilities)
+                 if r != 0
+                 if first_residues[i] != 0
+                 if second_residues[i] != 0 ]
 
     def _check(self):
         """Check this sieve against the naive implementation. For i>8, takes huge amounts of time."""
