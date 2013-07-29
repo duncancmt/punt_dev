@@ -10,7 +10,8 @@ import signal
 import errno
 from blumblumshub import BlumBlumShubRandom, Shower
 from random import SystemRandom
-random = SystemRandom()
+from correct_random import CorrectRandomWrapper
+random = CorrectRandomWrapper(SystemRandom())
 
 status_filename = (sys.argv[1] if len(sys.argv) > 1 else 'status.pkl')
 

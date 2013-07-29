@@ -1,6 +1,6 @@
 from __future__ import division
 from random import Random, BPF
-from proxy import BetterProxy
+from proxy import BetterProxy, getattr_static
 from math import ceil as _ceil, log as _log
 
 class CorrectRandom(Random):
@@ -83,8 +83,9 @@ class CorrectRandom(Random):
         return result
 
 
-class CorrectRandomWrapper(CorrectRandom, BetterProxy):
-    def __init__(self, obj):
-        object.__setattr__(self, "_obj", obj)
-
+class CorrectRandomWrapper(BetterProxy):
+    for name in CorrectRandom.__dict__.iterkeys():
+        locals()[name] = getattr_static(CorrectRandom, name)
+    del name
+    
 __all__ = ["CorrectRandom", "CorrectRandomWrapper"]
