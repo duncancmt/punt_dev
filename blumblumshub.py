@@ -8,6 +8,7 @@ import math
 import struct
 import cPickle
 from fractions import gcd
+from numbers import Integral
 from itertools import *
 
 import primes
@@ -90,7 +91,7 @@ class BlumBlumShubRandom(CorrectRandom):
         return result
 
     def seed(self, seed):
-        assert isinstance(seed, (int, long))
+        assert isinstance(seed, Integral)
         self.state = x_0 = seed >> self.security
         random.seed(seed & (2**self.security - 1))
 
@@ -144,6 +145,8 @@ class BlumBlumShubRandom(CorrectRandom):
         else:
             for _ in xrange(n):
                 self.state = pow(self.state, 2, self.modulus)
+        self._cache = 0L
+        self._cache_len = 0L
 
     @staticmethod
     def gen_special_prime(bits, certainty=128, random=random,
