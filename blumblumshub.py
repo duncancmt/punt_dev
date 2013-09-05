@@ -103,6 +103,9 @@ class BlumBlumShubRandom(CorrectRandom):
         self.modulus = p*q
         self.skip_modulus = lcm(p-1, q-1) # TODO: it probably isn't safe to keep this around
 
+        self._cache = 0L
+        self._cache_len = 0L
+
         if has_gmpy:
             self.modulus = mpz(self.modulus)
             self.skip_modulus = mpz(self.skip_modulus)
