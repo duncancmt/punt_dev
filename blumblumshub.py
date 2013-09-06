@@ -40,7 +40,7 @@ class BlumBlumShubRandom(CorrectRandom):
             security: The log (base 2) of the number of operations required to distinguish BBS output from random noise.
             tolerance: The difference between the probability that the sequence produced by BBS be declared non-random and the probability that a truly random sequence will be declared non-random.
             bits_to_supply: The number of bits that this RNG will be expected to produce securely. Default: 2**20
-            seed: Deterministically initializes the RNG. Must be a long or integer with length 2*security. (Optional)
+            seed: Deterministically initializes the RNG. Must be a long or integer with length 2*security bits. (Optional)
             paranoid: If paranoid is true, this RNG will raise a RuntimeError if asked to supply >bits_to_supply bits
             _state: If supplied, we skip normal initialization and use the supplied state instead. (Optional)
         """
@@ -55,13 +55,6 @@ class BlumBlumShubRandom(CorrectRandom):
             self._cache_len = 0L
             
             (self._modulus_length, self._bits_per_iteration) = self.optimal_parameters(self.security, self._bit_count_limit, tolerance)
-
-            # python random.SystemRandom() is unsuitable because it uses /dev/urandom
-            if seed is None:
-                seed = 0L
-                with open('/dev/random','r') as randfile:
-                    for i in xrange(int(math.ceil(2*self.security / 8.0))):
-                        seed |= struct.unpack('B', randfile.read(1))[0] << i*8
             self.seed(seed)
 
     @classmethod
@@ -80,8 +73,7 @@ class BlumBlumShubRandom(CorrectRandom):
 
         mask = 2**self._bits_per_iteration - 1
         for i in xrange(iterations):
-            self._cache <<= self._bits_per_iteration
-            self._cache |= self.state & mask
+            self._cache |= (self.state & mask) << self._cache_len
             self._cache_len += self._bits_per_iteration
             self.state = pow(self.state, 2, self.modulus)
 
@@ -90,18 +82,38 @@ class BlumBlumShubRandom(CorrectRandom):
         self._cache_len -= n
         return result
 
-    def seed(self, seed):
+    def seed(self, seed=None, regenerate_modulus=True):
+        """Keep the same security parameters, but reinitialize the state of this instance.
+
+        seed: (optional) a number that deterministically initializes the state
+            must be an integer of length 2*security bits or security bits if
+            regenerate_modulus is True, the default is to reinitialize from
+            /dev/random
+        regenerate_modulus: (optional) if true, pick new primes for the modulus,
+            otherwise reuse the existing modulus
+        """
+        seed_bits = 2*self.security if regenerate_modulus else self.security
+        # python random.SystemRandom() is unsuitable because it uses /dev/urandom
+        if seed is None:
+            seed = 0L
+            with open('/dev/random','r') as randfile:
+                for i in xrange(int(math.ceil(seed_bits / 8.0))):
+                    seed |= struct.unpack('B', randfile.read(1))[0] << i*8
+
         assert isinstance(seed, Integral)
-        self.state = x_0 = seed >> self.security
-        random.seed(seed & (2**self.security - 1))
+        self.state = x_0 = seed & (2**self.security - 1)
 
-        p = self.gen_special_prime(self._modulus_length / 2, certainty=self.security, random=random)
-        q = self.gen_special_prime(self._modulus_length / 2, certainty=self.security, random=random)
-        random.seed()
+        if regenerate_modulus:
+            random.seed(seed >> self.security)
+            p = self.gen_special_prime(int(math.floor(self._modulus_length / 2.0 + 1)),
+                                       certainty=self.security, random=random)
+            q = self.gen_special_prime(int(math.ceil(self._modulus_length / 2.0)),
+                                       certainty=self.security, random=random)
+            random.seed()
 
-        assert p != q
-        self.modulus = p*q
-        self.skip_modulus = lcm(p-1, q-1) # TODO: it probably isn't safe to keep this around
+            assert p != q
+            self.modulus = p*q
+            self.skip_modulus = lcm(p-1, q-1) # TODO: it probably isn't safe to keep this around
 
         self._cache = 0L
         self._cache_len = 0L
